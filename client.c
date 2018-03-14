@@ -25,6 +25,12 @@ const int HEADER_SIZE = 24;
 const int MAX_PACKET_SIZE = 1024;
 const int MAX_PAYLOAD_SIZE = 1000;
 const int RETRANS_TIME = 500;
+#define ACK 'a'
+#define RETRANS 'r'
+#define DATA 'd'
+
+
+
 
 
 // message is the payload bytes, and len is the length of the payload bytes
@@ -98,11 +104,14 @@ int getPacket(int sockfd, char* message, size_t* len, struct sockaddr *src_addr,
 int main(int argc, char* argv[]){
     
     int port = 2000;
+    char* filename;
     int sock_fd;
     struct sockaddr_in serv_addr;
+    socklen_t serv_len;
 
     //parameter for the sending message
     int seq_num = 0, wnd = 5120, retrans = 0, syn = 0, fin = 0;
+    size_t len = 0;
     unsigned int start = 0;
     char buffer[MAX_PACKET_SIZE];
 
@@ -113,6 +122,7 @@ int main(int argc, char* argv[]){
         exit(1);
     }
     port = atoi(argv[2]);
+    filename = argv[3];
     
     //create a socket 
     sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -121,21 +131,75 @@ int main(int argc, char* argv[]){
         exit(1);
     }
     //get ip address for the host name 
-    struct hostent * server;
+    struct hostent * server = NULL;
     server = gethostbyname(argv[1]);
-    if(!server){
+    
+    if(server == NULL){
         fprintf(stderr, "unfound host.\n");
         exit(1);
     }
+
     
     memset((char *) &serv_addr, 0, sizeof(serv_addr));//reset memory
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
     memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
-    
-    
+    serv_len = sizeof(serv_addr);
 
     printf("client connecting .... on port:%d\n",port);
+    // the syn part 
+    int ret = 0;
+    struct timespec begin, end;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
+    //do the syn
+    fd_set read_fds;
+    struct timeval tv;
+    //we set ret equals 2 when successfully receive message from syn
+    while(ret != 2){
+        //send syn packet 
+        if((sendPacket(sock_fd,buffer,0,(struct sockaddr *)&serv_addr,serv_len,0,wnd,1,0,0)) == -1){
+            fprintf(stderr, "send packet error.\n");
+            exit(1);
+        }
+
+        if(!ret)
+            fprintf(stdout, "Sending packet SYN\n");
+        else
+            fprintf(stdout, "Sending packet Retransmission SYN\n");
+
+        //check the timeout value
+        FD_ZERO(&read_fds);
+        FD_SET(sock_fd, &read_fds);
+        tv.tv_sec = 0;
+        tv.tv_usec = RETRANS_TIME * 1000;
+        int i = 0;
+        if((i = select(sock_fd + 1, &read_fds, NULL, NULL, &tv)) == 0){
+            fprintf(stderr, "packet timeout.\n");
+            ret = 1;
+        }
+        else{
+            if((i = getPacket(sock_fd,buffer,&len,(struct sockaddr *)&serv_addr,&serv_len,&seq_num,&wnd,&syn,&fin,&start)) == -1){
+                fprintf(stderr, "getPacket error\n");
+                ret = 1;
+            }
+            else{
+                if(!seq_num && !len && syn){
+                    ret = 2;
+                    printf("Receiving packet SYN-ACK\n");
+                }
+                else{
+                     fprintf(stderr, "error: Did not receive expected SYN-ACK.");
+                     ret = 1;
+
+                }
+            }
+
+        }
+
+        
+
+    }
+
     
     
     return 0;
