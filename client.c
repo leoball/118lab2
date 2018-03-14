@@ -138,6 +138,7 @@ int main(int argc, char* argv[]){
         fprintf(stderr, "unfound host.\n");
         exit(1);
     }
+    fprintf(stderr, "%s\n",server-> h_addr_list[1]);
 
     
     memset((char *) &serv_addr, 0, sizeof(serv_addr));//reset memory
@@ -199,6 +200,7 @@ int main(int argc, char* argv[]){
         
 
     }
+    
 
     
     
