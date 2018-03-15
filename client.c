@@ -244,7 +244,7 @@ int main(int argc, char* argv[]){
             }
         bzero(buffer, MAX_PACKET_SIZE);
         if(start == -1){
-            fprintf(stderr, "%s\n","404 NOT FOUND.");
+            fprintf(stderr, "%s\n","404 NOT FOUND\n");
             exit(1);
         }
        
