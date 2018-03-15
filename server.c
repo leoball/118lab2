@@ -187,8 +187,8 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "can't receive filename.\n");
         else{
         	if((file_fd = fopen(buffer,"r")) == NULL){
-        		sendPacket(sock_fd,ERROR_404,0,(struct sockaddr *) &cli_addr,cli_len,seq_num,wnd,0,0,-1);
-        		exit(1);
+        		sendPacket(sock_fd,ERROR_404,0,(struct sockaddr *) &cli_addr,cli_len,seq_num,wnd,0,1,-1);
+        		
 
         	}
         }
