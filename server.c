@@ -21,6 +21,28 @@ const int MAX_SEQ_NUM = 30720;
 // For UDP socket programming, the following tutorial was used: https://www.cs.rutgers.edu/~pxk/417/notes/sockets/udp.html
 // For select(), the following tutorial was used: http://beej.us/guide/bgnet/output/html/multipage/selectman.html
 
+struct packet
+{
+    int type;
+    //0:
+    //1:data
+    //2:ack
+    //3:retrans
+    int fin;
+    //0: disabled
+    //1: error
+    //2: EOF
+
+    int seq;
+    //sequence number
+    int msg_404;
+    int max_seq;
+    char* data_buff[MAX_PAYLOAD_SIZE];
+    double time;
+    int size;
+    int seq_count; 
+};
+
 int check_time_out(int sock_fd){
     fd_set read_fds;
     FD_ZERO(&read_fds);
@@ -195,9 +217,20 @@ int main(int argc, char *argv[])
         else{
         	if((file_fd = fopen(buffer,"r")) == NULL){
         		sendPacket(sock_fd,ERROR_404,0,(struct sockaddr *) &cli_addr,cli_len,seq_num,wnd,0,1,-1);
-        		
+        		//initialize data packet
+                //swtich to sendto
 
         	}
+
+            //initialize whole pakcet
+            //sepereate file into packets
+            //measure time and create time table
+            //send packets
+            //catch timeout and retransmit
+            //catch ack and update the window
+            //update time table
+            //EOF and send fin
+            //close connection
         }
 
 	}
