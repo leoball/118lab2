@@ -21,21 +21,6 @@ const int MAX_SEQ_NUM = 30720;
 // For UDP socket programming, the following tutorial was used: https://www.cs.rutgers.edu/~pxk/417/notes/sockets/udp.html
 // For select(), the following tutorial was used: http://beej.us/guide/bgnet/output/html/multipage/selectman.html
 
-int check_time_out(int sock_fd){
-    fd_set read_fds;
-    FD_ZERO(&read_fds);
-    FD_SET(sock_fd, &read_fds);
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = RETRANS_TIME * 1000;
-    int i = 0;
-    if((i = select(sock_fd + 1, &read_fds, NULL, NULL, &tv)) == 0)
-        return 1;
-    else
-        return 0;
-
-}
-
 int sendPacket(int sockfd, char* message, size_t len, const struct sockaddr *dest_addr, socklen_t dest_len, int seqNum, int wnd, int syn, int fin, unsigned int fileStart)
 {
 
@@ -180,10 +165,18 @@ int main(int argc, char *argv[])
                     printf("Sending packet %d %d SYN-ACK\n", seq_num, wnd);
 
         	}
-            if (check_time_out(sock_fd)){
-                fprintf(stderr, "packet timeout.\n");
-                ret = 1;
-            }
+        	//wait for the reply from the client 
+        	fd_set read_fds;
+    		struct timeval tv;
+    		FD_ZERO(&read_fds);
+      		FD_SET(sock_fd, &read_fds);
+        	tv.tv_sec = 0;
+        	tv.tv_usec = RETRANS_TIME * 1000;
+        	int i = 0;
+        	if((i = select(sock_fd + 1, &read_fds, NULL, NULL, &tv)) == 0){
+            	fprintf(stderr, "packet timeout.\n");
+            	ret = 1;
+        	}
         	else
         		break;
 

@@ -171,6 +171,7 @@ int main(int argc, char* argv[]){
     clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
     //do the syn
     //fd_set read_fds;
+    /*struct timeval tv;*/
     //we set ret equals 2 when successfully receive message from syn
     while(ret != 2){
         //send syn packet 
@@ -184,6 +185,16 @@ int main(int argc, char* argv[]){
         else
             fprintf(stdout, "Sending packet Retransmission SYN\n");
 
+        //check the timeout value
+/*        FD_ZERO(&read_fds);
+        FD_SET(sock_fd, &read_fds);
+        tv.tv_sec = 0;
+        tv.tv_usec = RETRANS_TIME * 1000;
+        int i = 0;
+        if((i = select(sock_fd + 1, &read_fds, NULL, NULL, &tv)) == 0){
+            fprintf(stderr, "packet timeout.\n");
+            ret = 1;
+        }*/
         if (check_time_out(sock_fd)){
             fprintf(stderr, "packet timeout.\n");
             ret = 1;
@@ -226,6 +237,16 @@ int main(int argc, char* argv[]){
             fprintf(stdout, "Sending packet 0 Retransmission\n");
         ret = 2;
 
+/*        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        FD_SET(sock_fd, &read_fds);
+        tv.tv_sec = 0;
+        tv.tv_usec = RETRANS_TIME * 1000;
+        int i = 0;
+        if((i = select(sock_fd + 1, &read_fds, NULL, NULL, &tv)) == 0){
+            fprintf(stderr, "packet timeout.\n");
+            ret = 1;
+        }*/
         if (check_time_out(sock_fd)){
             fprintf(stderr, "packet timeout.\n");
             ret = 1;
