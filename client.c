@@ -29,7 +29,27 @@ const int RETRANS_TIME = 500;
 #define RETRANS 'r'
 #define DATA 'd'
 
+struct packet
+{
+    int type;
+    //0:
+    //1:data
+    //2:ack
+    //3:retrans
+    int fin;
+    //0: disabled
+    //1: error
+    //2: EOF
 
+    int seq;
+    //sequence number
+    int msg_404;
+    int max_seq;
+    char* data_buff[MAX_PAYLOAD_SIZE];
+    double time;
+    int size;
+    int seq_count; 
+};
 
 
 
@@ -213,6 +233,7 @@ int main(int argc, char* argv[]){
     }
     //send the file name to the server
     ret = 0;
+Packet_filename:
     while(ret != 2){
         bzero(buffer,MAX_PACKET_SIZE);
         sprintf(buffer, "%s", argv[3]);
@@ -239,6 +260,85 @@ int main(int argc, char* argv[]){
 
     }
 
+    int window_size = wnd/MAX_PACKET_SIZE;
+
+    printf("Requested %s from %s.\n", argv[3], argv[1]);
+    printf("Propagating...\n");
+
+    struct packet data_packet;
+    memset((char*) &data_packet, 0, sizeof(data_packet));
+
+    data_packet.fin = 0;
+    data_packet.seq = 0;
+    data_packet.type = 2;
+
+    struct packet* window;
+    window = (struct packet*) malloc(window_size * sizeof(struct packet));
+    int x;
+    for (x=0; x<window_size; x++)
+    {
+        memset(&(window[i]), -1, sizeof(struct packet));
+    }
+    int window_start = 0;
+    int window_end = window_start + window_size;
+
+    char* suffix = "";
+    while(1)
+    {
+        recvfrom(sock_fd, &data_packet, sizeof(data_packet), 0, (struct sockaddr*) &serv_addr, &serv_len);
+        if (data_packet.msg_404 == 1)
+        {
+            printf("404 NOT FOUND\n");
+            //goto fin------------------------------------------------------------------
+        }
+
+        if (data_packet.fin == 1)
+            suffix = "FIN";
+        if (data_packet.type == 3)
+            suffix = "Retransmission";
+        printf("Receiving packet %d\n", data_packet.seq);
+
+        if (window_end > data_packet.max_seq)
+            window_end = data_packet.max_seq;
+        else
+            window_end = window_size;
+
+
+        int curr_seq = (data_packet.seq + data_packet.seq_count*30720)/MAX_PAYLOAD_SIZE;
+        if ((curr_seq - window_start >= 0) && (curr_seq - window_start < window_size))
+        {
+            struct packet ack_packet;
+            memset((char*) &ack_packet, 0, sizeof(ack_packet));
+            ack_packet.type = 2;
+            ack_packet.seq = data_packet.seq;
+            ack_packet.seq_count = data_packet.seq_count;
+            sendto(sock_fd, &ack_packet, sizeof(ack_packet), 0, (struct sockaddr*) &serv_addr, &serv_len);
+            printf("Sending packet %d %s\n", ack_packet.seq, suffix);
+
+            memcpy( &(window[curr_seq - window_start]), &data_packet, sizeof(struct data_packet));
+
+            while(1){
+                if ((window[0].seq + window[0].seq_count * 30720) / MAX_PAYLOAD_SIZE == window_start)
+                {
+                    fwrite(window[0].data_buff, sizeof(char), window[0].size, file_fd);
+                    int i = 0;
+                    for (i = 0; i != window_size - 1; i++)
+                    {
+                        memcpy(&(window[i]), &(window[i+1]), sizeof(struct packet));
+                    }
+                    memset(&(window[window_size-1]), -1, sizeof(struct packet)):
+                    window_start += 1;
+                }
+                else
+                    break;
+            }
+
+        }
+    }
+
+
+    /*
+
     //start file transfer process
     while(!fin){
         int i = 0;
@@ -254,7 +354,7 @@ int main(int argc, char* argv[]){
        
 
 
-    }
+    }*/
 
     
     return 0;
