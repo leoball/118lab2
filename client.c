@@ -58,6 +58,7 @@ int sendPacket(int sockfd, char* message, size_t len, const struct sockaddr *des
     memcpy(toSend + intSize * 4, &fin, intSize);
     memcpy(toSend + intSize * 5, &fileStart, intSize);
     memcpy(toSend + HEADER_SIZE, message, len);
+    fprintf(stderr, "%c\n",toSend[10] );
     result = sendto(sockfd, toSend, packetLen, 0, dest_addr, dest_len);
     if (result < 0)
     {
@@ -105,6 +106,7 @@ int main(int argc, char* argv[]){
     
     int port = 2000;
     char* filename;
+    FILE *file_fd;
     int sock_fd;
     struct sockaddr_in serv_addr;
     socklen_t serv_len;
@@ -198,6 +200,55 @@ int main(int argc, char* argv[]){
         }
 
         
+
+    }
+    //send the file name to the server
+    ret = 0;
+    while(ret != 2){
+        bzero(buffer,MAX_PACKET_SIZE);
+        sprintf(buffer, "%s", argv[3]);
+        if((sendPacket(sock_fd,buffer,strlen(buffer),(struct sockaddr *)&serv_addr,serv_len,0,wnd,0,0,0)) == -1){
+            fprintf(stderr, "send packet error.\n");
+            exit(1);
+        }
+         if(!ret)
+            fprintf(stdout, "Sending packet 0\n");
+         else
+            fprintf(stdout, "Sending packet 0 Retransmission\n");
+        ret = 2;
+
+        FD_ZERO(&read_fds);
+        FD_SET(sock_fd, &read_fds);
+        tv.tv_sec = 0;
+        tv.tv_usec = RETRANS_TIME * 1000;
+        int i = 0;
+        if((i = select(sock_fd + 1, &read_fds, NULL, NULL, &tv)) == 0){
+            fprintf(stderr, "packet timeout.\n");
+            ret = 1;
+        }
+        
+        if( (file_fd = fopen("received.data", "w")) == 0){
+            fprintf(stderr, "%s\n","failed to create received.data");
+            exit(1);
+        }
+
+
+    }
+
+    //start file transfer process
+    while(!fin){
+        int i = 0;
+         if((i = getPacket(sock_fd,buffer,&len,(struct sockaddr *)&serv_addr,&serv_len,&seq_num,&wnd,&syn,&fin,&start)) == -1){
+                fprintf(stderr, "getPacket error\n");
+                ret = 1;
+            }
+        bzero(buffer, MAX_PACKET_SIZE);
+        if(start == -1){
+            fprintf(stderr, "%s\n","404 NOT FOUND.");
+            exit(1);
+        }
+       
+
 
     }
     
